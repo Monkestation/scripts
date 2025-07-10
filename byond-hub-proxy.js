@@ -1,5 +1,3 @@
-// setup a DNS record on the server/network your byond server is running from, and set hub.byond.com and secure.byond.com to be the server you're running this script on
-// we have a S2S wireguard tunnel setup, so we have this script running on our relay that players connect to.
 const net = require("node:net");
 const dns = require("node:dns/promises");
 
@@ -9,6 +7,10 @@ const secureByondUrl = "https://secure.byond.com/";
 
 function setupTcpProxy(localPort, targetIp) {
   const server = net.createServer((localClientSocket) => {
+    // if (!net.isIPv4(localClientSocket.remoteAddress)) {
+    //   localClientSocket.destroy();
+    //   return;
+    // }
     const clientRemoteAddress = `${localClientSocket.remoteAddress}:${localClientSocket.remotePort}`;
     console.log(
       `[${localPort}] Incoming client connection from ${clientRemoteAddress}`
@@ -99,7 +101,7 @@ async function getHubPorts() {
   const hubPortsResponse = await (
     await fetch(new URL("HubPorts", secureByondUrl))
   ).text();
-  return hubPortsResponse.trim().split(/\r?\n/);
+  return hubPortsResponse.trim().split(/\r?\n/).map(e=>Number.parseInt(e));
 }
 
 async function main() {
@@ -117,7 +119,7 @@ async function main() {
   }
 
   try {
-    hubIP = await dns.resolve4("hub.byond.com");
+    hubIP = (await dns.resolve4("hub.byond.com"))[0];
     console.log(`Got hub IP: ${hubIP}`);
   } catch (error) {
     console.error(`Failed to query hub IP!`, error);
